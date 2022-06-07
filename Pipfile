@@ -15,6 +15,7 @@ pyramid-sqlalchemy = "*"
 wtforms = "*"
 pydantic = "*"
 minio = "*"
+orjson = "*"
 
 [dev-packages]
 

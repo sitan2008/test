@@ -123,4 +123,4 @@ def delete(req):
     DBSession.delete(DBFile)
     DBSession.commit()
 
-    return True
+    return 'success'

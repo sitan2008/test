@@ -1,5 +1,5 @@
 from pyramid.config import Configurator
-from pyramid.httpexceptions import HTTPNotFound
+from pyramid import httpexceptions
 from pyramid.request import Request
 from pyramid.view import view_config
 from pyramid.response import Response
@@ -14,56 +14,45 @@ from app.database import db
 bucket = storage.MINIO()
 
 
-@view_config(route_name='folders_new', renderer='string', request_method='POST')
+@view_config(route_name='folders_new', renderer='json', request_method='POST')
 def folder_create(req: Request):
     folder = folders_crud.create(req)
     if not folder:
-        return 'folder already exist'
-    return {
-        'folder_name': folder.folder_name,
-        'created_at': folder.created_at,
-        'user_id': folder.user_id,
-        'id': folder.id
-    }
-
-
-@view_config(route_name='folders', renderer='text', request_method='GET')
-def folder_read(req: Request):
-    folder = folders_crud.read(req)
-    if not folder:
-        return HTTPNotFound()
-    return {'folder_name': folder.folder_name,
-            'created_at': folder.created_at,
-            'updated_at': folder.updated_at,
-            'id': folder.id}
-
-
-@view_config(route_name='folders_all', renderer='string', request_method='GET')
-def folder_read_all(req: Request):
-    folders = folders_crud.read_all()
-    return {'folders': folders}
-
-
-@view_config(route_name='folders', renderer='string', request_method='PUT')
-def folder_update(req: Request):
-    folder = folders_crud.update(req)
-    if not folder:
-        return HTTPNotFound()
-    return {'folder_name': folder.folder_name,
-            'created_at': folder.created_at,
-            'updated_at': folder.updated_at,
-            'user_id': folder.user_id,
-            'id': folder.id}
-
-
-@view_config(route_name='folders', renderer='string', request_method='DELETE')
-def folder_delete(req: Request):
-    folder = folders_crud.delete(req)
-    if not folder:
-        return HTTPNotFound()
+        return httpexceptions.HTTPConflict('folder already exist')
     return folder
 
 
+@view_config(route_name='folders', renderer='json', request_method='GET')
+def folder_read(req: Request):
+    folder = folders_crud.read(req)
+    if not folder:
+        return httpexceptions.HTTPNotFound()
+    return folder
+
+
+@view_config(route_name='folders_all', renderer='json', request_method='GET')
+def folder_read_all(req: Request):
+    folders = folders_crud.read_all()
+    return folders
+
+
+@view_config(route_name='folders', renderer='json', request_method='PUT')
+def folder_update(req: Request):
+    folder = folders_crud.update(req)
+    if not folder:
+        return httpexceptions.HTTPNotFound()
+    return folder
+
+
+@view_config(route_name='folders', renderer='json', request_method='DELETE')
+def folder_delete(req: Request):
+    folder = folders_crud.delete(req)
+    if not folder:
+        return httpexceptions.HTTPNotFound()
+    return folder
+
+
+# ToDo
 @view_config(route_name='registry', renderer='string', request_method='POST')
 def registry(req: Request):
     user = user_crud.create(req)
@@ -99,7 +88,7 @@ def file_upload(req: Request):
 def file_download(req: Request):
     file_name, file = files_crud.read(req)
     if not file:
-        return HTTPNotFound()
+        return httpexceptions.HTTPNotFound()
     res = Response(body=file.data)
     res.headers['Content-Disposition'] = 'attachment;filename=%s' % file_name
     return res
@@ -109,7 +98,7 @@ def file_download(req: Request):
 def file_move(req: Request):
     file = files_crud.move(req)
     if not file:
-        return HTTPNotFound()
+        return httpexceptions.HTTPNotFound()
     return file
 
 
@@ -129,15 +118,15 @@ def file_rename(req: Request):
 def file_delete(req: Request):
     file = files_crud.delete(req)
     if not file:
-        return HTTPNotFound()
-    return 'success'
+        return httpexceptions.HTTPNotFound()
+    return file
 
 
 @view_config(route_name='files_share', renderer='string', request_method='GET')
 def file_share_link(req: Request):
     link = files_crud.read_for_share(req)
     if not link:
-        return HTTPNotFound()
+        return httpexceptions.HTTPNotFound()
     return link
 
 
