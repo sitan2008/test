@@ -1,0 +1,22 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pyramid = "==2.0"
+waitress = "*"
+alembic = "*"
+sqlalchemy = "*"
+psycopg2-binary = "*"
+pyramid-debugtoolbar = "*"
+python-dotenv = "*"
+pyramid-sqlalchemy = "*"
+wtforms = "*"
+pydantic = "*"
+minio = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.9"

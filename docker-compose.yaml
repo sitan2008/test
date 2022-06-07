@@ -1,0 +1,48 @@
+version: '3.7'
+services:
+  app:
+    container_name: ronis
+    ports:
+      - "6543:6543"
+    restart: always
+    build: .
+    environment:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: ronis_db
+      DB_USER: ronis_user
+      DB_PASSWORD: admin
+      PORT: 6543
+    depends_on:
+      - db
+      - minio
+  minio:
+    image: minio/minio:latest
+    command: server --console-address ":8888" /data/
+    ports:
+      - "8888:9000"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: admin123
+      MINIO_ACCESS_KEY: flexsky
+      MINIO_SECRET_KEY: admin123
+    volumes:
+      - minio-storage:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+  db:
+    image: postgres:13-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=ronis_user
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=ronis_db
+volumes:
+  minio-storage:
+  postgres_data:
