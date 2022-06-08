@@ -13,6 +13,7 @@ class CreateFolder(FolderSchema):
 
 
 class ReadFolder(CreateFolder):
+    id: UUID
     created_at: datetime
     updated_at: datetime = None
 
@@ -22,3 +23,11 @@ class ReadFolder(CreateFolder):
 
 class UpdateFolder(FolderSchema):
     pass
+
+
+class IdFolderPath(BaseModel):
+    folder_id: UUID
+
+
+class NameFolderPatch(BaseModel):
+    folder_name: str

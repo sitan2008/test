@@ -6,9 +6,8 @@ from app.database.db import Session
 from sqlalchemy.future import select
 
 
-def create(req):
+def create(schema: schemas.CreateFolder):
     DBSession = Session()
-    schema = schemas.CreateFolder(**req.POST)
 
     verify_folder = DBSession.execute(select(models.BaseFolder)
                                       .where(models.BaseFolder.folder_name == schema.folder_name))
@@ -22,24 +21,19 @@ def create(req):
     DBSession.commit()
     DBSession.refresh(folder)
 
-    schema = schemas.ReadFolder.from_orm(folder)
-
-    return json.loads(schema.json())
+    return json.loads(schemas.ReadFolder.from_orm(folder).json())
 
 
-def read(req):
+def read(schema: schemas.IdFolderPath):
     DBSession = Session()
 
-    folder_id = req.matchdict['folder_id']
-
-    folder = DBSession.get(models.BaseFolder, folder_id)
+    folder = DBSession.execute(select(models.BaseFolder)
+                               .where(models.BaseFolder.id == schema.folder_id)).scalar()
 
     if not folder:
         return None
 
-    schema = schemas.ReadFolder.from_orm(folder)
-
-    return json.loads(schema.json())
+    return json.loads(schemas.ReadFolder.from_orm(folder).json())
 
 
 def read_all():
@@ -50,12 +44,11 @@ def read_all():
     return [json.loads(schemas.ReadFolder.from_orm(folder).json()) for folder in folders]
 
 
-def update(req):
+def update(schema: schemas.UpdateFolder, schema_id: schemas.IdFolderPath):
     DBSession = Session()
 
-    folder_id = req.matchdict['folder_id']
-    schema = schemas.UpdateFolder(**req.POST)
-    folder = DBSession.get(models.BaseFolder, folder_id)
+    folder = DBSession.execute(select(models.BaseFolder)
+                                      .where(models.BaseFolder.id == schema_id.folder_id)).scalar()
 
     if not folder:
         return None
@@ -66,23 +59,23 @@ def update(req):
     if verify_folder.scalar():
         return None
 
-    folder.update(req.POST.get(schema.folder_name))
+    folder.update(schema.folder_name)
 
     DBSession.add(folder)
     DBSession.commit()
     DBSession.refresh(folder)
 
-    schema = schemas.ReadFolder.from_orm(folder)
-
-    return json.loads(schema.json())
+    return json.loads(schemas.ReadFolder.from_orm(folder).json())
 
 
-def delete(req):
+def delete(schema: schemas.IdFolderPath):
     DBSession = Session()
 
-    folder_id = req.matchdict['folder_id']
+    folder = DBSession.execute(select(models.BaseFolder)
+                               .where(models.BaseFolder.id == schema.folder_id)).scalar()
 
-    folder = DBSession.get(models.BaseFolder, folder_id)
+    if not folder:
+        return None
 
     DBSession.delete(folder)
     DBSession.commit()

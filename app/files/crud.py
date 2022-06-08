@@ -1,7 +1,8 @@
+import json
 import os
 import re
 
-from app.files import models, storage
+from app.files import models, storage, schemas
 from app.database.db import Session
 
 from sqlalchemy.future import select
@@ -18,9 +19,10 @@ def create(req):
     folder_id = req.POST.get('folder_id')
     file_type = re.split(r"\.", file_name)
 
-    verify_file = DBSession.execute(select(models.BaseFile).where(models.BaseFile.file_name == file_name))
+    verify_file = DBSession.execute(select(models.BaseFile)
+                                    .where(models.BaseFile.file_name == file_name)).scalar()
 
-    if verify_file.scalar():
+    if verify_file:
         return None
 
     bucket.load_file(file_name, file, size.st_size)
@@ -34,32 +36,52 @@ def create(req):
     DBSession.commit()
     DBSession.refresh(DBFile)
 
-    return DBFile
+    return json.loads(schemas.ReadFile.from_orm(DBFile).json())
 
 
-def read(req):
+def read(schema: schemas.NameFilePatch):
     DBSession = Session()
 
-    file_id = req.matchdict['files_id']
+    DBFile = DBSession.execute(select(models.BaseFile).
+                               where(models.BaseFile.file_name == schema.file_name)).scalar()
 
-    DBFile = DBSession.get(models.BaseFile, file_id)
-
-    file = bucket.download_file(DBFile.file_name)
-
-    if not file:
+    if not DBFile:
         return None
 
-    bucket.load_file('test', file, 106090)
+    return json.loads(schemas.ReadFile.from_orm(DBFile).json())
+
+
+def read_all(schema: schemas.FileReadAll):
+    DBSession = Session()
+
+    if schema.sort_value:
+        files = DBSession.execute(select(models.BaseFile).order_by(schema.sort_value)).scalars().all()
+
+        return [json.loads(schemas.ReadFile.from_orm(file).json()) for file in files]
+
+
+def download(schema: schemas.IdFilePath):
+    DBSession = Session()
+
+    DBFile = DBSession.execute(select(models.BaseFile).
+                               where(models.BaseFile.id == schema.files_id)).scalar()
+
+    if not DBFile:
+        return None
+
+    file = bucket.download_file(DBFile.file_name)
 
     return DBFile.file_name, file
 
 
-def read_for_share(req):
+def read_for_share(schema_id: schemas.IdFilePath):
     DBSession = Session()
 
-    file_id = req.matchdict['files_id']
+    DBFile = DBSession.execute(select(models.BaseFile).
+                               where(models.BaseFile.id == schema_id.files_id)).scalar()
 
-    DBFile = DBSession.get(models.BaseFile, file_id)
+    if not DBFile:
+        return None
 
     link = bucket.share_file_link(DBFile.file_name)
 
@@ -69,51 +91,49 @@ def read_for_share(req):
     return link
 
 
-def update(req):
+def update(schema_id: schemas.IdFilePath, schema: schemas.UpdateFile):
     DBSession = Session()
 
-    file_id = req.matchdict['files_id']
-    new_name = req.POST.get('file_name')
-
-    DBFile = DBSession.get(models.BaseFile, file_id)
-
-    bucket.update_file(new_name, DBFile.file_name, DBFile.size, DBFile.type)
-
-    DBFile.update(new_name, DBFile.type)
-
-    DBSession.add(DBFile)
-    DBSession.commit()
-    DBSession.refresh(DBFile)
-
-    return DBFile
-
-
-def move(req):
-    DBSession = Session()
-
-    file_id = req.matchdict['files_id']
-    new_folder = req.POST.get('folder_id')
-
-    DBFile = DBSession.get(models.BaseFile, file_id)
+    DBFile = DBSession.execute(select(models.BaseFile).
+                               where(models.BaseFile.id == schema_id.files_id)).scalar()
 
     if not DBFile:
         return None
 
-    DBFile.move(new_folder)
+    bucket.update_file(schema.file_name, DBFile.file_name, DBFile.size, DBFile.type)
+
+    DBFile.update(schema.file_name, DBFile.type)
 
     DBSession.add(DBFile)
     DBSession.commit()
     DBSession.refresh(DBFile)
 
-    return DBFile
+    return json.loads(schemas.ReadFile.from_orm(DBFile).json())
 
 
-def delete(req):
+def move(schema_id: schemas.IdFilePath, schema: schemas.UpdateFile):
     DBSession = Session()
 
-    file_id = req.matchdict['files_id']
+    DBFile = DBSession.execute(select(models.BaseFile).
+                               where(models.BaseFile.id == schema_id.files_id)).scalar()
 
-    DBFile = DBSession.get(models.BaseFile, file_id)
+    if not DBFile:
+        return None
+
+    DBFile.move(schema.folder_id)
+
+    DBSession.add(DBFile)
+    DBSession.commit()
+    DBSession.refresh(DBFile)
+
+    return json.loads(schemas.ReadFile.from_orm(DBFile).json())
+
+
+def delete(schema_id: schemas.IdFilePath):
+    DBSession = Session()
+
+    DBFile = DBSession.execute(select(models.BaseFile).
+                               where(models.BaseFile.id == schema_id.files_id)).scalar()
 
     if not DBFile:
         return None

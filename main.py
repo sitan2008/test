@@ -6,9 +6,9 @@ from pyramid.response import Response
 
 from wsgiref.simple_server import make_server
 
-from app.folders import crud as folders_crud
+from app.folders import crud as folders_crud, schemas as folders_schemas
 from app.users import crud as user_crud
-from app.files import crud as files_crud, storage
+from app.files import crud as files_crud, storage, schemas as files_schema
 from app.database import db
 
 bucket = storage.MINIO()
@@ -16,7 +16,11 @@ bucket = storage.MINIO()
 
 @view_config(route_name='folders_new', renderer='json', request_method='POST')
 def folder_create(req: Request):
-    folder = folders_crud.create(req)
+    try:
+        schema = folders_schemas.CreateFolder(**req.POST)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    folder = folders_crud.create(schema)
     if not folder:
         return httpexceptions.HTTPConflict('folder already exist')
     return folder
@@ -24,9 +28,13 @@ def folder_create(req: Request):
 
 @view_config(route_name='folders', renderer='json', request_method='GET')
 def folder_read(req: Request):
-    folder = folders_crud.read(req)
+    try:
+        folder_id = folders_schemas.IdFolderPath(**req.matchdict)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    folder = folders_crud.read(folder_id)
     if not folder:
-        return httpexceptions.HTTPNotFound()
+        return httpexceptions.HTTPNotFound('folder not found')
     return folder
 
 
@@ -38,18 +46,115 @@ def folder_read_all(req: Request):
 
 @view_config(route_name='folders', renderer='json', request_method='PUT')
 def folder_update(req: Request):
-    folder = folders_crud.update(req)
+    try:
+        folder_id = folders_schemas.IdFolderPath(**req.matchdict)
+        schema = folders_schemas.UpdateFolder(**req.POST)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    folder = folders_crud.update(schema, folder_id)
     if not folder:
-        return httpexceptions.HTTPNotFound()
+        return httpexceptions.HTTPNotFound('folder not found')
     return folder
 
 
 @view_config(route_name='folders', renderer='json', request_method='DELETE')
 def folder_delete(req: Request):
-    folder = folders_crud.delete(req)
+    try:
+        folder_id = folders_schemas.IdFolderPath(**req.matchdict)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    folder = folders_crud.delete(folder_id)
     if not folder:
-        return httpexceptions.HTTPNotFound()
+        return httpexceptions.HTTPNotFound('folder not found')
     return folder
+
+
+
+@view_config(route_name='files_new', renderer='json', request_method='POST')
+def file_upload(req: Request):
+    file = files_crud.create(req)
+    if not file:
+        return httpexceptions.HTTPConflict('file already exist')
+    return file
+
+
+@view_config(route_name='file', renderer='json', request_method='GET')
+def file_read(req: Request):
+    try:
+        file_name = files_schema.NameFilePatch(**req.matchdict)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    file = files_crud.read(file_name)
+    if not file:
+        return httpexceptions.HTTPNotFound()
+    return file
+
+
+@view_config(route_name='files_all', renderer='json', request_method='PATCH')
+def file_read_all(req: Request):
+    try:
+        schema = files_schema.FileReadAll(**req.POST)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    files = files_crud.read_all(schema)
+    return files
+
+
+@view_config(route_name='files', request_method='GET')
+def file_download(req: Request):
+    try:
+        file_id = files_schema.IdFilePath(**req.matchdict)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    file_name, file = files_crud.download(file_id)
+    if not file_name:
+        return httpexceptions.HTTPNotFound()
+    res = Response(body=file.data)
+    res.headers['Content-Disposition'] = 'attachment;filename=%s' % file_name
+    return res
+
+
+@view_config(route_name='files', renderer='json', request_method='PUT')
+def file_update(req: Request):
+    try:
+        file_id = files_schema.IdFilePath(**req.matchdict)
+        schema = files_schema.UpdateFile(**req.POST)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    if schema.folder_id:
+        file = files_crud.move(file_id, schema)
+        if not file:
+            return httpexceptions.HTTPNotFound()
+        return file
+    if schema.file_name:
+        file = files_crud.update(file_id, schema)
+        if not file:
+            return httpexceptions.HTTPNotFound()
+        return file
+
+
+@view_config(route_name='files', renderer='json', request_method='DELETE')
+def file_delete(req: Request):
+    try:
+        file_id = files_schema.IdFilePath(**req.matchdict)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    file = files_crud.delete(file_id)
+    if not file:
+        return httpexceptions.HTTPNotFound()
+    return file
+
+
+@view_config(route_name='files_share', renderer='string', request_method='GET')
+def file_share_link(req: Request):
+    try:
+        file_id = files_schema.IdFilePath(**req.matchdict)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    link = files_crud.read_for_share(file_id)
+    if not link:
+        return httpexceptions.HTTPNotFound()
+    return link
 
 
 # ToDo
@@ -70,66 +175,6 @@ def login(req: Request):
     pass
 
 
-@view_config(route_name='files_new', renderer='string', request_method='POST')
-def file_upload(req: Request):
-    file = files_crud.create(req)
-    if not file:
-        return 'file already exist'
-    return {'file_name': file.file_name,
-            'id': file.id,
-            'folder_id': file.folder_id,
-            'size': file.size,
-            'type': file.type,
-            'created_at': file.created_at,
-            'updated_at': file.updated_at}
-
-
-@view_config(route_name='files', request_method='GET')
-def file_download(req: Request):
-    file_name, file = files_crud.read(req)
-    if not file:
-        return httpexceptions.HTTPNotFound()
-    res = Response(body=file.data)
-    res.headers['Content-Disposition'] = 'attachment;filename=%s' % file_name
-    return res
-
-
-@view_config(route_name='files', renderer='string', request_method='PUT')
-def file_move(req: Request):
-    file = files_crud.move(req)
-    if not file:
-        return httpexceptions.HTTPNotFound()
-    return file
-
-
-@view_config(route_name='files', renderer='string', request_method='PATCH')
-def file_rename(req: Request):
-    file = files_crud.update(req)
-    return {'file_name': file.file_name,
-            'id': file.id,
-            'folder_id': file.folder_id,
-            'size': file.size,
-            'type': file.type,
-            'created_at': file.created_at,
-            'updated_at': file.updated_at}
-
-
-@view_config(route_name='files', renderer='string', request_method='DELETE')
-def file_delete(req: Request):
-    file = files_crud.delete(req)
-    if not file:
-        return httpexceptions.HTTPNotFound()
-    return file
-
-
-@view_config(route_name='files_share', renderer='string', request_method='GET')
-def file_share_link(req: Request):
-    link = files_crud.read_for_share(req)
-    if not link:
-        return httpexceptions.HTTPNotFound()
-    return link
-
-
 if __name__ == '__main__':
     db.Base.metadata.create_all()
     bucket.init_bucket()
@@ -148,7 +193,9 @@ if __name__ == '__main__':
     config.add_route('login', '/login')
     config.add_route('files_new', '/files_new')
     config.add_route('files', '/files/{files_id}')
+    config.add_route('file', '/file/{file_name}')
     config.add_route('files_share', '/files_share/{files_id}')
+    config.add_route('files_all', '/files_all')
     config.scan()
 
     app = config.make_wsgi_app()
