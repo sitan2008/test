@@ -22,15 +22,6 @@ class BaseFolder(db.Base):
         self.user_id = user_id
         self.updated_at = updated_at
 
-    def update(self, folder_name):
+    def update(self, folder_name: str):
         self.folder_name = folder_name
         self.updated_at = datetime.datetime.utcnow()
-
-    def to_json(self):
-        to_serialize = ['id', 'folder_name', 'user_id', 'created_at', 'updated_at']
-        d = {}
-        for attr_name in to_serialize:
-            d[attr_name] = getattr(self, attr_name)
-        return d
-
-

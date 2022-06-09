@@ -14,6 +14,9 @@ class BaseUser(db.Base):
     password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow())
 
-    def __init__(self, name, password):
+    def __init__(self, name: str, password: str):
         self.name = name
         self.password = password
+
+    def verify_password(self, password: str):
+        return self.password == password

@@ -1,13 +1,17 @@
+from pyramid.authentication import AuthTktAuthenticationPolicy
+from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid import httpexceptions
 from pyramid.request import Request
 from pyramid.view import view_config
 from pyramid.response import Response
+from pyramid.security import remember
 
 from wsgiref.simple_server import make_server
 
+
 from app.folders import crud as folders_crud, schemas as folders_schemas
-from app.users import crud as user_crud
+from app.users import crud as user_crud, schemas as users_schemas
 from app.files import crud as files_crud, storage, schemas as files_schema
 from app.database import db
 
@@ -67,7 +71,6 @@ def folder_delete(req: Request):
     if not folder:
         return httpexceptions.HTTPNotFound('folder not found')
     return folder
-
 
 
 @view_config(route_name='files_new', renderer='json', request_method='POST')
@@ -157,22 +160,28 @@ def file_share_link(req: Request):
     return link
 
 
-# ToDo
-@view_config(route_name='registry', renderer='string', request_method='POST')
+@view_config(route_name='register', renderer='json', request_method='POST')
 def registry(req: Request):
-    user = user_crud.create(req)
-    return {
-        'id': user.id,
-        'name': user.name,
-        'password': user.password,
-        'created_at': user.created_at
-    }
+    try:
+        schema = users_schemas.CreateUser(**req.POST)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    user = user_crud.create(schema)
+    if not user:
+        return httpexceptions.HTTPConflict('username already exist')
+    return user
 
 
-# ToDo
-@view_config(route_name='login', renderer='string', request_method='POST')
+@view_config(route_name='auth', renderer='string', request_method='POST')
 def login(req: Request):
-    pass
+    try:
+        schema = users_schemas.LoginForm(**req.POST)
+    except:
+        return httpexceptions.HTTPBadRequest()
+    user = user_crud.read(schema)
+    if user and user.verify_password(schema.password):
+        headers = remember(req, user.id)
+        return httpexceptions.HTTPFound(location=req.route_url('folders_all'), headers=headers)
 
 
 if __name__ == '__main__':
@@ -184,13 +193,19 @@ if __name__ == '__main__':
         'reload_all': True
     }
 
-    config = Configurator(settings=settings)
+    authentication_policy = AuthTktAuthenticationPolicy('secret')
+    authorization_policy = ACLAuthorizationPolicy()
+
+    config = Configurator(settings=settings,
+                          authorization_policy=authorization_policy,
+                          authentication_policy=authentication_policy)
+
     config.include('pyramid_debugtoolbar')
     config.add_route('folders', '/folders/{folder_id}')
     config.add_route('folders_new', '/folders_new')
     config.add_route('folders_all', '/folders_all')
-    config.add_route('registry', '/registry')
-    config.add_route('login', '/login')
+    config.add_route('register', '/register')
+    config.add_route('auth', '/auth')
     config.add_route('files_new', '/files_new')
     config.add_route('files', '/files/{files_id}')
     config.add_route('file', '/file/{file_name}')

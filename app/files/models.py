@@ -33,3 +33,4 @@ class BaseFile(db.Base):
 
     def move(self, folder_id: UUID):
         self.folder_id = folder_id
+        self.updated_at = datetime.datetime.utcnow()
