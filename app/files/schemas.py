@@ -13,6 +13,7 @@ class FileSchema(BaseModel):
 
 
 class ReadFile(FileSchema):
+    id: UUID
     created_at: datetime
     updated_at: date = None
 
