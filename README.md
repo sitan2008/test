@@ -1,7 +1,7 @@
 # Ronis test task
 
 ### This service use MinIO for storage files
-.....
+......
 
 ## Run
 Makefile -> run
@@ -15,4 +15,4 @@ Makefile -> run
 App host - http://0.0.0.0:6543
 
 ## Schema for upload file
-.....
+......
