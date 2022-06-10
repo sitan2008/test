@@ -12,7 +12,7 @@ class BaseFile(db.Base):
     __tablename__ = 'files'
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    file_name = Column(String(128), nullable=False)
+    file_name = Column(String(128), unique=True, nullable=False)
     size = Column(Integer, nullable=False)
     type = Column(String(64), nullable=False)
     folder_id = Column(UUID(as_uuid=True), ForeignKey('folders.id'))

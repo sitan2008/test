@@ -15,4 +15,4 @@ Makefile -> run
 App host - http://0.0.0.0:6543
 
 ## Schema for upload file
-......
+![schema](images/schema.jpg)

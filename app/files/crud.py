@@ -20,6 +20,10 @@ def create(req) -> Optional[models.BaseFile]:
     folder_id = req.POST.get('folder_id')
     file_type = re.split(r"\.", file_name)
 
+    valid_filename = DBSession.execute(select(models.BaseFile).
+                                       where(models.BaseFile.file_name == file_name)).scalar()
+    if valid_filename:
+        return None
     bucket.load_file(file_name, file, size.st_size)
 
     DBFile = models.BaseFile(file_name=file_name,
