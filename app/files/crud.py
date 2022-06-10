@@ -6,6 +6,7 @@ from app.files import models, storage, schemas
 from app.database.db import Session
 
 from sqlalchemy.future import select
+from sqlalchemy.exc import IntegrityError
 
 bucket = storage.MINIO()
 
@@ -19,12 +20,6 @@ def create(req):
     folder_id = req.POST.get('folder_id')
     file_type = re.split(r"\.", file_name)
 
-    verify_file = DBSession.execute(select(models.BaseFile)
-                                    .where(models.BaseFile.file_name == file_name)).scalar()
-
-    if verify_file:
-        return None
-
     bucket.load_file(file_name, file, size.st_size)
 
     DBFile = models.BaseFile(file_name=file_name,
@@ -32,9 +27,12 @@ def create(req):
                              type=file_type[-1],
                              folder_id=folder_id)
 
-    DBSession.add(DBFile)
-    DBSession.commit()
-    DBSession.refresh(DBFile)
+    try:
+        DBSession.add(DBFile)
+        DBSession.commit()
+        DBSession.refresh(DBFile)
+    except IntegrityError:
+        return None
 
     return json.loads(schemas.ReadFile.from_orm(DBFile).json())
 
@@ -104,9 +102,12 @@ def update(schema_id: schemas.IdFilePath, schema: schemas.UpdateFile):
 
     DBFile.update(schema.file_name, DBFile.type)
 
-    DBSession.add(DBFile)
-    DBSession.commit()
-    DBSession.refresh(DBFile)
+    try:
+        DBSession.add(DBFile)
+        DBSession.commit()
+        DBSession.refresh(DBFile)
+    except IntegrityError:
+        return None
 
     return json.loads(schemas.ReadFile.from_orm(DBFile).json())
 

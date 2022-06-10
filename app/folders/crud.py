@@ -4,22 +4,20 @@ from app.folders import models, schemas
 from app.database.db import Session
 
 from sqlalchemy.future import select
+from sqlalchemy.exc import IntegrityError
 
 
 def create(schema: schemas.CreateFolder):
     DBSession = Session()
 
-    verify_folder = DBSession.execute(select(models.BaseFolder)
-                                      .where(models.BaseFolder.folder_name == schema.folder_name))
-
-    if verify_folder.scalar():
-        return None
-
     folder = models.BaseFolder(folder_name=schema.folder_name, user_id=schema.user_id)
 
-    DBSession.add(folder)
-    DBSession.commit()
-    DBSession.refresh(folder)
+    try:
+        DBSession.add(folder)
+        DBSession.commit()
+        DBSession.refresh(folder)
+    except IntegrityError:
+        return None
 
     return json.loads(schemas.ReadFolder.from_orm(folder).json())
 
@@ -53,17 +51,14 @@ def update(schema: schemas.UpdateFolder, schema_id: schemas.IdFolderPath):
     if not folder:
         return None
 
-    verify_folder = DBSession.execute(select(models.BaseFolder)
-                                      .where(models.BaseFolder.folder_name == schema.folder_name))
-
-    if verify_folder.scalar():
-        return None
-
     folder.update(schema.folder_name)
 
-    DBSession.add(folder)
-    DBSession.commit()
-    DBSession.refresh(folder)
+    try:
+        DBSession.add(folder)
+        DBSession.commit()
+        DBSession.refresh(folder)
+    except IntegrityError:
+        return None
 
     return json.loads(schemas.ReadFolder.from_orm(folder).json())
 

@@ -16,6 +16,8 @@ wtforms = "*"
 pydantic = "*"
 minio = "*"
 orjson = "*"
+bcrypt = "*"
+passlib = "*"
 
 [dev-packages]
 

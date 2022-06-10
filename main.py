@@ -1,5 +1,4 @@
 from pyramid.authentication import AuthTktAuthenticationPolicy
-from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
 from pyramid import httpexceptions
 from pyramid.request import Request
@@ -8,7 +7,6 @@ from pyramid.response import Response
 from pyramid.security import remember
 
 from wsgiref.simple_server import make_server
-
 
 from app.folders import crud as folders_crud, schemas as folders_schemas
 from app.users import crud as user_crud, schemas as users_schemas
@@ -26,7 +24,7 @@ def folder_create(req: Request):
         return httpexceptions.HTTPBadRequest()
     folder = folders_crud.create(schema)
     if not folder:
-        return httpexceptions.HTTPConflict('folder already exist')
+        return httpexceptions.HTTPConflict()
     return folder
 
 
@@ -38,7 +36,7 @@ def folder_read(req: Request):
         return httpexceptions.HTTPBadRequest()
     folder = folders_crud.read(folder_id)
     if not folder:
-        return httpexceptions.HTTPNotFound('folder not found')
+        return httpexceptions.HTTPNotFound()
     return folder
 
 
@@ -57,7 +55,7 @@ def folder_update(req: Request):
         return httpexceptions.HTTPBadRequest()
     folder = folders_crud.update(schema, folder_id)
     if not folder:
-        return httpexceptions.HTTPNotFound('folder not found')
+        return httpexceptions.HTTPNotFound()
     return folder
 
 
@@ -69,7 +67,7 @@ def folder_delete(req: Request):
         return httpexceptions.HTTPBadRequest()
     folder = folders_crud.delete(folder_id)
     if not folder:
-        return httpexceptions.HTTPNotFound('folder not found')
+        return httpexceptions.HTTPNotFound()
     return folder
 
 
@@ -77,7 +75,7 @@ def folder_delete(req: Request):
 def file_upload(req: Request):
     file = files_crud.create(req)
     if not file:
-        return httpexceptions.HTTPConflict('file already exist')
+        return httpexceptions.HTTPConflict()
     return file
 
 
@@ -168,7 +166,7 @@ def registry(req: Request):
         return httpexceptions.HTTPBadRequest()
     user = user_crud.create(schema)
     if not user:
-        return httpexceptions.HTTPConflict('username already exist')
+        return httpexceptions.HTTPConflict()
     return user
 
 
@@ -179,9 +177,10 @@ def login(req: Request):
     except:
         return httpexceptions.HTTPBadRequest()
     user = user_crud.read(schema)
-    if user and user.verify_password(schema.password):
+    if user and user.verify_password(schema.password, user.password):
         headers = remember(req, user.id)
         return httpexceptions.HTTPFound(location=req.route_url('folders_all'), headers=headers)
+    return httpexceptions.HTTPForbidden()
 
 
 if __name__ == '__main__':
@@ -194,10 +193,8 @@ if __name__ == '__main__':
     }
 
     authentication_policy = AuthTktAuthenticationPolicy('secret')
-    authorization_policy = ACLAuthorizationPolicy()
 
     config = Configurator(settings=settings,
-                          authorization_policy=authorization_policy,
                           authentication_policy=authentication_policy)
 
     config.include('pyramid_debugtoolbar')

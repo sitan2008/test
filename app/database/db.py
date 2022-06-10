@@ -6,7 +6,9 @@ from app import config
 
 cfg = config.DatabaseConfig()
 
-engine = create_engine(cfg.get_db_url())
+DB_URL = cfg.get_db_url()
+
+engine = create_engine(DB_URL)
 
 Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
