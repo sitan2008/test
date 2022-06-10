@@ -3,3 +3,14 @@ docker-compose:
 
 docker-compose-d:
 	docker-compose down
+
+make-deps:
+	pipenv sync
+	pipenv lock -r > requirements.txt
+
+app:
+	python main.py
+
+run: docker-compose
+
+

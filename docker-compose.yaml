@@ -7,18 +7,21 @@ services:
     restart: always
     build: .
     environment:
-      DB_HOST: localhost
+      DB_HOST: db
+      MINIO_URL: minio:9000
       DB_PORT: 5432
       DB_NAME: ronis_db
       DB_USER: ronis_user
       DB_PASSWORD: admin
       PORT: 6543
+    links:
+      - minio
     depends_on:
       - db
       - minio
   minio:
     image: minio/minio:latest
-    command: server --console-address ":8888" /data/
+    command: server /data/
     ports:
       - "8888:9000"
     environment:

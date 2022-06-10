@@ -1,3 +1,4 @@
+from typing import Optional
 from uuid import UUID
 from datetime import datetime, date
 
@@ -9,10 +10,6 @@ class FileSchema(BaseModel):
     size: int
     type: str
     folder_id: UUID
-
-
-class CreateFile(BaseModel):
-    pass
 
 
 class ReadFile(FileSchema):
@@ -30,9 +27,10 @@ class UpdateFile(BaseModel):
 
 class FileReadAll(BaseModel):
     sort_value: str
+    folder_id: UUID
 
     @validator('sort_value')
-    def isSortValue(cls, value):
+    def isSortValue(cls, value) -> Optional[str]:
         values = ['file_name', 'size', 'type', 'created_at', 'updated_at']
         if value not in values:
             return None

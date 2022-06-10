@@ -18,12 +18,12 @@ class BaseUser(db.Base):
     password = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.datetime.utcnow())
 
-    def __init__(self, username: str, password: str):
+    def __init__(self, username, password):
         self.username = username
         self.password = password
 
     @staticmethod
-    def verify_password(plain_password, hashed_password):
+    def verify_password(plain_password, hashed_password) -> str:
         return pwd_context.verify(plain_password, hashed_password)
 
 

@@ -16,7 +16,7 @@ class UserSchema(BaseModel):
 class CreateUser(UserSchema):
 
     @validator('password')
-    def get_password_hash(cls, password):
+    def get_password_hash(cls, password) -> str:
         return pwd_context.hash(password)
 
 

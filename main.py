@@ -1,3 +1,5 @@
+import json
+
 from pyramid.authentication import AuthTktAuthenticationPolicy
 from pyramid.config import Configurator
 from pyramid import httpexceptions
@@ -25,7 +27,7 @@ def folder_create(req: Request):
     folder = folders_crud.create(schema)
     if not folder:
         return httpexceptions.HTTPConflict()
-    return folder
+    return json.loads(folders_schemas.ReadFolder.from_orm(folder).json())
 
 
 @view_config(route_name='folders', renderer='json', request_method='GET')
@@ -37,13 +39,13 @@ def folder_read(req: Request):
     folder = folders_crud.read(folder_id)
     if not folder:
         return httpexceptions.HTTPNotFound()
-    return folder
+    return json.loads(folders_schemas.ReadFolder.from_orm(folder).json())
 
 
 @view_config(route_name='folders_all', renderer='json', request_method='GET')
 def folder_read_all(req: Request):
     folders = folders_crud.read_all()
-    return folders
+    return [json.loads(folders_schemas.ReadFolder.from_orm(folder).json()) for folder in folders]
 
 
 @view_config(route_name='folders', renderer='json', request_method='PUT')
@@ -56,7 +58,7 @@ def folder_update(req: Request):
     folder = folders_crud.update(schema, folder_id)
     if not folder:
         return httpexceptions.HTTPNotFound()
-    return folder
+    return json.loads(folders_schemas.ReadFolder.from_orm(folder).json())
 
 
 @view_config(route_name='folders', renderer='json', request_method='DELETE')
@@ -76,7 +78,7 @@ def file_upload(req: Request):
     file = files_crud.create(req)
     if not file:
         return httpexceptions.HTTPConflict()
-    return file
+    return json.loads(files_schema.ReadFile.from_orm(file).json())
 
 
 @view_config(route_name='file', renderer='json', request_method='GET')
@@ -88,7 +90,7 @@ def file_read(req: Request):
     file = files_crud.read(file_name)
     if not file:
         return httpexceptions.HTTPNotFound()
-    return file
+    return json.loads(files_schema.ReadFile.from_orm(file).json())
 
 
 @view_config(route_name='files_all', renderer='json', request_method='PATCH')
@@ -98,7 +100,7 @@ def file_read_all(req: Request):
     except:
         return httpexceptions.HTTPBadRequest()
     files = files_crud.read_all(schema)
-    return files
+    return [json.loads(files_schema.ReadFile.from_orm(file).json()) for file in files]
 
 
 @view_config(route_name='files', request_method='GET')
@@ -126,12 +128,12 @@ def file_update(req: Request):
         file = files_crud.move(file_id, schema)
         if not file:
             return httpexceptions.HTTPNotFound()
-        return file
+        return json.loads(files_schema.ReadFile.from_orm(file).json())
     if schema.file_name:
         file = files_crud.update(file_id, schema)
         if not file:
             return httpexceptions.HTTPNotFound()
-        return file
+        return json.loads(files_schema.ReadFile.from_orm(file).json())
 
 
 @view_config(route_name='files', renderer='json', request_method='DELETE')

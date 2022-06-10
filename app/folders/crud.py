@@ -1,4 +1,4 @@
-import json
+from typing import Optional, List
 
 from app.folders import models, schemas
 from app.database.db import Session
@@ -7,7 +7,7 @@ from sqlalchemy.future import select
 from sqlalchemy.exc import IntegrityError
 
 
-def create(schema: schemas.CreateFolder):
+def create(schema: schemas.CreateFolder) -> Optional[models.BaseFolder]:
     DBSession = Session()
 
     folder = models.BaseFolder(folder_name=schema.folder_name, user_id=schema.user_id)
@@ -19,10 +19,10 @@ def create(schema: schemas.CreateFolder):
     except IntegrityError:
         return None
 
-    return json.loads(schemas.ReadFolder.from_orm(folder).json())
+    return folder
 
 
-def read(schema: schemas.IdFolderPath):
+def read(schema: schemas.IdFolderPath) -> Optional[models.BaseFolder]:
     DBSession = Session()
 
     folder = DBSession.execute(select(models.BaseFolder)
@@ -31,18 +31,18 @@ def read(schema: schemas.IdFolderPath):
     if not folder:
         return None
 
-    return json.loads(schemas.ReadFolder.from_orm(folder).json())
+    return folder
 
 
-def read_all():
+def read_all() -> List[Optional[models.BaseFolder]]:
     DBSession = Session()
 
     folders = DBSession.execute(select(models.BaseFolder)).scalars().all()
 
-    return [json.loads(schemas.ReadFolder.from_orm(folder).json()) for folder in folders]
+    return folders
 
 
-def update(schema: schemas.UpdateFolder, schema_id: schemas.IdFolderPath):
+def update(schema: schemas.UpdateFolder, schema_id: schemas.IdFolderPath) -> Optional[models.BaseFolder]:
     DBSession = Session()
 
     folder = DBSession.execute(select(models.BaseFolder)
@@ -60,10 +60,10 @@ def update(schema: schemas.UpdateFolder, schema_id: schemas.IdFolderPath):
     except IntegrityError:
         return None
 
-    return json.loads(schemas.ReadFolder.from_orm(folder).json())
+    return folder
 
 
-def delete(schema: schemas.IdFolderPath):
+def delete(schema: schemas.IdFolderPath) -> Optional[str]:
     DBSession = Session()
 
     folder = DBSession.execute(select(models.BaseFolder)

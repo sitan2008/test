@@ -1,6 +1,6 @@
-import json
 import os
 import re
+from typing import Optional, List
 
 from app.files import models, storage, schemas
 from app.database.db import Session
@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 bucket = storage.MINIO()
 
 
-def create(req):
+def create(req) -> Optional[models.BaseFile]:
     DBSession = Session()
 
     file_name = req.POST.get('file').filename
@@ -34,10 +34,10 @@ def create(req):
     except IntegrityError:
         return None
 
-    return json.loads(schemas.ReadFile.from_orm(DBFile).json())
+    return DBFile
 
 
-def read(schema: schemas.NameFilePatch):
+def read(schema: schemas.NameFilePatch) -> Optional[models.BaseFile]:
     DBSession = Session()
 
     DBFile = DBSession.execute(select(models.BaseFile).
@@ -46,16 +46,18 @@ def read(schema: schemas.NameFilePatch):
     if not DBFile:
         return None
 
-    return json.loads(schemas.ReadFile.from_orm(DBFile).json())
+    return DBFile
 
 
-def read_all(schema: schemas.FileReadAll):
+def read_all(schema: schemas.FileReadAll) -> List[Optional[models.BaseFile]]:
     DBSession = Session()
 
     if schema.sort_value:
-        files = DBSession.execute(select(models.BaseFile).order_by(schema.sort_value)).scalars().all()
+        files = DBSession.execute(select(models.BaseFile)
+                                  .where(models.BaseFile.folder_id == schema.folder_id)
+                                  .order_by(schema.sort_value)).scalars().all()
 
-        return [json.loads(schemas.ReadFile.from_orm(file).json()) for file in files]
+        return files
 
 
 def download(schema: schemas.IdFilePath):
@@ -72,7 +74,7 @@ def download(schema: schemas.IdFilePath):
     return DBFile.file_name, file
 
 
-def read_for_share(schema_id: schemas.IdFilePath):
+def read_for_share(schema_id: schemas.IdFilePath) -> Optional[str]:
     DBSession = Session()
 
     DBFile = DBSession.execute(select(models.BaseFile).
@@ -89,7 +91,7 @@ def read_for_share(schema_id: schemas.IdFilePath):
     return link
 
 
-def update(schema_id: schemas.IdFilePath, schema: schemas.UpdateFile):
+def update(schema_id: schemas.IdFilePath, schema: schemas.UpdateFile) -> Optional[models.BaseFile]:
     DBSession = Session()
 
     DBFile = DBSession.execute(select(models.BaseFile).
@@ -109,10 +111,10 @@ def update(schema_id: schemas.IdFilePath, schema: schemas.UpdateFile):
     except IntegrityError:
         return None
 
-    return json.loads(schemas.ReadFile.from_orm(DBFile).json())
+    return DBFile
 
 
-def move(schema_id: schemas.IdFilePath, schema: schemas.UpdateFile):
+def move(schema_id: schemas.IdFilePath, schema: schemas.UpdateFile) -> Optional[models.BaseFile]:
     DBSession = Session()
 
     DBFile = DBSession.execute(select(models.BaseFile).
@@ -127,10 +129,10 @@ def move(schema_id: schemas.IdFilePath, schema: schemas.UpdateFile):
     DBSession.commit()
     DBSession.refresh(DBFile)
 
-    return json.loads(schemas.ReadFile.from_orm(DBFile).json())
+    return DBFile
 
 
-def delete(schema_id: schemas.IdFilePath):
+def delete(schema_id: schemas.IdFilePath) -> Optional[str]:
     DBSession = Session()
 
     DBFile = DBSession.execute(select(models.BaseFile).
